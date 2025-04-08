@@ -20,7 +20,14 @@ class Window:
         if title:
             title_str = f" {title} "
             x = max(1, (self.width - len(title_str)) // 2)
-            self.win.addstr(0, x, title_str)
+            try:
+                self.win.addstr(0, x, title_str)
+            except curses.error:
+                # Fall back to a simpler title if there's an error
+                try:
+                    self.win.addstr(0, 1, "Window")
+                except:
+                    pass
     
     def clear(self):
         """Clear the content window."""
@@ -109,11 +116,11 @@ class TaskListWindow(Window):
             priority_markers = ["!", "!!", "!!!"]
             priority_str = priority_markers[task['priority'] - 1] if 1 <= task['priority'] <= 3 else ""
             
-            # Format status with icons
+            # Format status with icons (using ASCII only to avoid Unicode display issues)
             status_map = {
                 "not_started": "[ ]",  # Empty square
-                "in_progress": "[→]",  # Arrow (in progress)
-                "completed": "[✓]",    # Checkmark
+                "in_progress": "[>]",  # Right arrow (in progress) - ASCII version
+                "completed": "[x]",    # Checkmark - ASCII version
                 # For backward compatibility
                 "pending": "[ ]"
             }
@@ -125,9 +132,17 @@ class TaskListWindow(Window):
             if len(title) > max_title_width:
                 title = title[:max_title_width-3] + "..."
             
-            # Display task line
+            # Display task line with error handling
             task_str = f"{status_str} {title} {priority_str}"
-            self.content_window.addstr(i, 0, task_str)
+            try:
+                self.content_window.addstr(i, 0, task_str)
+            except curses.error:
+                # Handle display errors gracefully
+                try:
+                    # Try with a simpler string
+                    self.content_window.addstr(i, 0, f"Task {i+1}")
+                except:
+                    pass
             
             if idx == self.selected_index:
                 self.content_window.attroff(curses.A_REVERSE)
@@ -440,7 +455,7 @@ class PlanWindow(Window):
                     self.content_window.attron(curses.A_REVERSE)
                 
                 # Format step with order and completion status
-                completion_status = "[✓]" if step['completed'] else "[ ]"
+                completion_status = "[x]" if step['completed'] else "[ ]"
                 
                 # Get name or fallback to description for backward compatibility
                 name = step.get('name', step.get('description', 'Unnamed step'))
@@ -453,7 +468,15 @@ class PlanWindow(Window):
                 # Display step line with safe index access
                 order = step.get('order', 0)
                 step_str = f"{order + 1:2d}. {completion_status} {name}"
-                self.content_window.addstr(i, 0, step_str)
+                try:
+                    self.content_window.addstr(i, 0, step_str)
+                except curses.error:
+                    # Handle display errors gracefully
+                    try:
+                        # Try with a simpler string
+                        self.content_window.addstr(i, 0, f"Step {order + 1}")
+                    except:
+                        pass
                 
                 if idx == self.selected_index:
                     self.content_window.attroff(curses.A_REVERSE)
@@ -464,7 +487,10 @@ class PlanWindow(Window):
         # Add a help line at the bottom if there's space
         if content_height > list_height + 1:
             help_text = "Enter/Space: Toggle completion | D: Show/hide details"
-            self.content_window.addstr(content_height - 1, 0, help_text)
+            try:
+                self.content_window.addstr(content_height - 1, 0, help_text)
+            except curses.error:
+                pass  # Skip help text if it doesn't fit
             
         self.refresh()
         

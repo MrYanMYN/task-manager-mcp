@@ -238,45 +238,70 @@ class TerminalUI:
         
     def check_file_changes(self):
         """Check if any data files have been modified externally (like by MCP)."""
-        current_time = time.time()
-        
-        # Only check periodically to reduce file system access
-        if current_time - self.last_check_time < self.file_check_interval:
-            return False
+        try:
+            current_time = time.time()
             
-        self.last_check_time = current_time
-        changes_detected = False
-        
-        # Get file paths from the API's managers
-        task_file = self.api.task_manager.file_path
-        plan_file = self.api.plan_manager.file_path
-        notes_file = self.api.task_manager.notes_file_path
-        
-        # Check if any data files have been modified
-        tasks_changed = os.path.exists(task_file) and os.path.getmtime(task_file) > self.last_tasks_mtime
-        plan_changed = os.path.exists(plan_file) and os.path.getmtime(plan_file) > self.last_plan_mtime
-        notes_changed = os.path.exists(notes_file) and os.path.getmtime(notes_file) > self.last_notes_mtime
-        
-        if tasks_changed or plan_changed or notes_changed:
-            # Update last modified times
-            if tasks_changed:
-                self.last_tasks_mtime = os.path.getmtime(task_file)
-            if plan_changed:
-                self.last_plan_mtime = os.path.getmtime(plan_file)
-            if notes_changed:
-                self.last_notes_mtime = os.path.getmtime(notes_file)
-            
-            # Reload all data from files
-            self.api.reload_all()
-            
-            # Refresh UI components
-            self.refresh_tasks()
-            self.refresh_plan()
-            self.refresh_notes()
-            
-            changes_detected = True
+            # Only check periodically to reduce file system access
+            if current_time - self.last_check_time < self.file_check_interval:
+                return False
                 
-        return changes_detected
+            self.last_check_time = current_time
+            changes_detected = False
+            
+            # Get file paths from the API's managers
+            task_file = self.api.task_manager.file_path
+            plan_file = self.api.plan_manager.file_path
+            notes_file = self.api.task_manager.notes_file_path
+            
+            # Check if any data files have been modified
+            tasks_changed = os.path.exists(task_file) and os.path.getmtime(task_file) > self.last_tasks_mtime
+            plan_changed = os.path.exists(plan_file) and os.path.getmtime(plan_file) > self.last_plan_mtime
+            notes_changed = os.path.exists(notes_file) and os.path.getmtime(notes_file) > self.last_notes_mtime
+            
+            if tasks_changed or plan_changed or notes_changed:
+                # Update last modified times
+                if tasks_changed:
+                    self.last_tasks_mtime = os.path.getmtime(task_file)
+                if plan_changed:
+                    self.last_plan_mtime = os.path.getmtime(plan_file)
+                if notes_changed:
+                    self.last_notes_mtime = os.path.getmtime(notes_file)
+                
+                try:
+                    # Reload all data from files
+                    self.api.reload_all()
+                    
+                    # Refresh UI components with individual try-except blocks
+                    try:
+                        if tasks_changed:
+                            self.refresh_tasks()
+                    except Exception as e:
+                        # Silently handle task refresh error
+                        pass
+                        
+                    try:
+                        if plan_changed:
+                            self.refresh_plan()
+                    except Exception as e:
+                        # Silently handle plan refresh error
+                        pass
+                        
+                    try:
+                        if notes_changed:
+                            self.refresh_notes()
+                    except Exception as e:
+                        # Silently handle notes refresh error
+                        pass
+                    
+                    changes_detected = True
+                except Exception as e:
+                    # If reload fails, try to continue without crashing
+                    pass
+                    
+            return changes_detected
+        except Exception as e:
+            # Fail silently if file checking itself fails
+            return False
     
     def update_focus(self, focus):
         """Update the UI focus."""
