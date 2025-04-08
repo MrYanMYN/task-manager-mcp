@@ -2,6 +2,10 @@
 
 A terminal-based task tracking application with a three-pane layout for managing tasks and project plans.
 
+ # Image
+
+![Terminal Task Tracker](https://github.com/MrYanMYN/task-manager-mcp/blob/master/img.png?raw=true)
+
 ## Features
 
 - Three-pane terminal UI:
